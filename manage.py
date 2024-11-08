@@ -6,7 +6,7 @@ import sys
 
 def main():
     settings_module = (
-        "my_core_project.deployment_settings"
+        "my_core_project.deploymentSettings"
         if "RENDER_EXTERNAL_HOSTNAME" in os.environ
         else "my_core_project.settings"
     )

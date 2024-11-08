@@ -21,6 +21,7 @@ from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from .models import *
 from django.db.models import Count
+from django.db.models.functions import TruncMonth
 
 
 # GET ALL FILES FOR ADMIN
@@ -41,6 +42,42 @@ def get_files(request):
         return Response(result, status=200)
     except Exception as e:
         return Response({"detail": str(e)}, status=500)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def count_upload(request):
+    try:
+        # Group by month and count the number of uploads for each month
+        monthly_uploads = (
+            File.objects.annotate(month=TruncMonth("upload_date"))
+            .values("month")
+            .annotate(count=Count("id"))
+            .order_by("month")
+        )
+
+        # Format the result as a list of dictionaries
+        result = [
+            {"month": entry["month"], "total_uploads": entry["count"]}
+            for entry in monthly_uploads
+        ]
+
+        return Response(result, status=200)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def count_file(request):
+    try:
+        print("Attempting to count files in the database.")  # Debug line
+        file_count = File.objects.aggregate(count=Count("id"))["count"]
+        print(f"File count: {file_count}")  # Debug line
+        return Response({"file_count": file_count}, status=200)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return Response({"error": "An unexpected error occurred."}, status=500)
 
 
 # Get the total file size upload the user has

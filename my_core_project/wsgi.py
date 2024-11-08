@@ -12,7 +12,7 @@ import os
 from django.core.wsgi import get_wsgi_application
 
 settings_module = (
-    "my_core_project.deployment_settings"
+    "my_core_project.deploymentSettings"
     if "RENDER_EXTERNAL_HOSTNAME" in os.environ
     else "my_core_project.settings"
 )

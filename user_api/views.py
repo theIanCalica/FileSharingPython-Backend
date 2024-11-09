@@ -263,8 +263,8 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
     def list(self, request):
-        """Retrieve all users with custom behavior (optional)."""
-        users = self.get_queryset()
+        """Retrieve all users, sorted by ID (ascending)."""
+        users = self.get_queryset().order_by("id")  # Sort by ID in ascending order
         serializer = self.get_serializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

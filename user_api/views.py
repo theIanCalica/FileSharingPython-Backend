@@ -263,10 +263,33 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
     def list(self, request):
-        """Retrieve all users, sorted by ID (ascending)."""
-        users = self.get_queryset().order_by("id")  # Sort by ID in ascending order
-        serializer = self.get_serializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        """Retrieve all users, sorted by ID (ascending), with their user profile data."""
+        users = self.get_queryset().order_by("id")  # Sort users by ID
+
+        # Manually add UserProfile data to each user
+        users_data = []
+        for user in users:
+            # Retrieve the related UserProfile object for each user
+            try:
+                user_profile = (
+                    user.userprofile
+                )  # This assumes the reverse relationship is named 'userprofile'
+                # Add the user profile data as a dictionary or object
+                profile_data = {
+                    "public_id": user_profile.public_id,
+                    "url": user_profile.url,
+                }
+            except UserProfile.DoesNotExist:
+                profile_data = {}  # In case there's no profile for the user
+
+            # Serialize the user data along with the profile data
+            user_data = UserSerializer(user).data
+            user_data["profile"] = (
+                profile_data  # Add profile data to the user dictionary
+            )
+            users_data.append(user_data)
+
+        return Response(users_data, status=status.HTTP_200_OK)
 
     def create(self, request):
         """Create a new user."""

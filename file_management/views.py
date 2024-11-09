@@ -300,9 +300,7 @@ def file_delete_view(request, pk):
 def share_file(request):
 
     file_id = request.data.get("file_id")
-    username = request.data.get("username")  # Change this line
-    print(file_id)
-    print(username)
+    username = request.data.get("username")
     file = get_object_or_404(File, id=file_id, user=request.user)
     shared_with = get_object_or_404(User, username=username)  # Change this line
 

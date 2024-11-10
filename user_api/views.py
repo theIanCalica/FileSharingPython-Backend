@@ -20,6 +20,9 @@ from datetime import datetime, timedelta
 import jwt
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.mail import EmailMessage
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Change profile picture
@@ -298,53 +301,68 @@ class UserViewSet(viewsets.ModelViewSet):
     def create(self, request):
         """Create a new user."""
         serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request, pk=None):
-        """Update an existing user."""
-        try:
-            user = User.objects.get(pk=pk)
-            user.username = request.data.get("username", user.username)
-            user.email = request.data.get("email", user.email)
-            user.first_name = request.data.get("first_name", user.first_name)
-            user.last_name = request.data.get("last_name", user.last_name)
+        if serializer.is_valid():  # Check if the serializer data is valid
+            with transaction.atomic():
+                user = serializer.save()  # Save the user if the data is valid
+                profile = UserProfile.objects.create(user=user)  # Create the profile
+                # Serialize user data for the response
+                user_data = UserObjSerializer(user).data
+                profile_data = UserProfileSerializer(profile).data
+                return Response(
+                    {
+                        "message": "Successfully Created",
+                        "user": user_data,
+                        "profile": profile_data,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+        else:
+            # Return errors if the serializer data is invalid
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            user.save()
-            serializer = UserObjSerializer(user)
-            return Response(
-                {"success": "Update successfully", "user": serializer.data},
-                status=status.HTTP_200_OK,
-            )
-        except User.DoesNotExist:
-            return Response(
-                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+        def update(self, request, pk=None):
+            """Update an existing user."""
+            try:
+                user = User.objects.get(pk=pk)
+                user.username = request.data.get("username", user.username)
+                user.email = request.data.get("email", user.email)
+                user.first_name = request.data.get("first_name", user.first_name)
+                user.last_name = request.data.get("last_name", user.last_name)
 
-        serializer = UserDetailsSerializer(user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            user_obj_serializer = UserObjSerializer(user)
-            return Response(
-                {"user": user_obj_serializer.data}, status=status.HTTP_200_OK
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                user.save()
+                serializer = UserObjSerializer(user)
+                return Response(
+                    {"success": "Update successfully", "user": serializer.data},
+                    status=status.HTTP_200_OK,
+                )
+            except User.DoesNotExist:
+                return Response(
+                    {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+                )
 
-    def destroy(self, request, pk=None):
-        """Delete a user by primary key (pk)."""
-        try:
-            user = User.objects.get(pk=pk)
-            user.delete()
-            return Response(
-                {"message": "User deleted successfully"},
-                status=status.HTTP_204_NO_CONTENT,
-            )
-        except User.DoesNotExist:
-            return Response(
-                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            serializer = UserDetailsSerializer(user, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                user_obj_serializer = UserObjSerializer(user)
+                return Response(
+                    {"user": user_obj_serializer.data}, status=status.HTTP_200_OK
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        def destroy(self, request, pk=None):
+            """Delete a user by primary key (pk)."""
+            try:
+                user = User.objects.get(pk=pk)
+                user.delete()
+                return Response(
+                    {"message": "User deleted successfully"},
+                    status=status.HTTP_204_NO_CONTENT,
+                )
+            except User.DoesNotExist:
+                return Response(
+                    {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+                )
 
 
 @api_view(["POST"])

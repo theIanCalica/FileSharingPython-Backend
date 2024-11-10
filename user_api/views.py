@@ -73,7 +73,7 @@ def reset_password_request(request):
         # Send password reset email
         send_mail(
             "Password Reset Request",
-            f"Use this link to reset your password: http://localhost:3000/change-password/{reset_token}/",
+            f"Use this link to reset your password: https://filesharingpython-frontend.onrender.com/{reset_token}/",
             settings.EMAIL_HOST_USER,  # Use the configured email from settings
             [email],  # The recipient's email
             fail_silently=False,

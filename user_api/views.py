@@ -170,11 +170,15 @@ class UserRegister(APIView):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def check_unique(request):
+    user_id = request.query_params.get("id")
     username = request.query_params.get("username")
     email = request.query_params.get("email")
 
-    is_username_unique = not User.objects.filter(username=username).exists()
-    is_email_unique = not User.objects.filter(email=email).exists()
+    # Exclude the current user (if user_id is provided) while checking uniqueness
+    is_username_unique = (
+        not User.objects.filter(username=username).exclude(id=user_id).exists()
+    )
+    is_email_unique = not User.objects.filter(email=email).exclude(id=user_id).exists()
 
     return Response(
         {
@@ -303,6 +307,17 @@ class UserViewSet(viewsets.ModelViewSet):
         """Update an existing user."""
         try:
             user = User.objects.get(pk=pk)
+            user.username = request.data.get("username", user.username)
+            user.email = request.data.get("email", user.email)
+            user.first_name = request.data.get("first_name", user.first_name)
+            user.last_name = request.data.get("last_name", user.last_name)
+
+            user.save()
+            serializer = UserObjSerializer(user)
+            return Response(
+                {"success": "Update successfully", "user": serializer.data},
+                status=status.HTTP_200_OK,
+            )
         except User.DoesNotExist:
             return Response(
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND

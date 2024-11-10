@@ -10,6 +10,7 @@ router.register(r"users", UserViewSet, basename="user")
 # Define urlpatterns with both router and custom paths
 urlpatterns = [
     path("check-unique/", check_unique, name="check_unique"),
+    path("check-unique/<int:id>/", check_unique, name="check_unique_with_id"),
     path("register/", UserRegister.as_view(), name="register"),
     path("login/", UserLogin.as_view(), name="login"),
     path("logout/", UserLogout.as_view(), name="logout"),

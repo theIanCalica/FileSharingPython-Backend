@@ -31,10 +31,6 @@ logger = logging.getLogger(__name__)
 def change_profile_picture(request):
     user_profile = request.user.userprofile
     file = request.FILES.get("profile_picture")
-
-    # Debugging: Check if the file is coming through correctly
-    print(f"Received file: {file.name}")
-
     if not file:
         return Response(
             {"error": "No image provided."}, status=status.HTTP_400_BAD_REQUEST
@@ -172,16 +168,14 @@ class UserRegister(APIView):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def check_unique(request):
-    user_id = request.query_params.get("id")
+def check_unique(request, id=None):
     username = request.query_params.get("username")
     email = request.query_params.get("email")
-
     # Exclude the current user (if user_id is provided) while checking uniqueness
     is_username_unique = (
-        not User.objects.filter(username=username).exclude(id=user_id).exists()
+        not User.objects.filter(username=username).exclude(id=id).exists()
     )
-    is_email_unique = not User.objects.filter(email=email).exclude(id=user_id).exists()
+    is_email_unique = not User.objects.filter(email=email).exclude(id=id).exists()
 
     return Response(
         {
@@ -234,7 +228,6 @@ class UserLogin(APIView):
     def post(self, request):
         data = request.data
         assert validate_username(data)
-        print(data)
         assert validate_password(data)
         serializer = UserLoginSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
@@ -329,7 +322,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 user.email = request.data.get("email", user.email)
                 user.first_name = request.data.get("first_name", user.first_name)
                 user.last_name = request.data.get("last_name", user.last_name)
-
                 user.save()
                 serializer = UserObjSerializer(user)
                 return Response(

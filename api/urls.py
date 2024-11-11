@@ -49,6 +49,7 @@ urlpatterns = [
     path("get-files/", get_files, name="get-files"),
     path("files-count/", count_file, name="count-file"),
     path("upload-per-month/", count_upload, name="upload-per-month"),
+    path("search/", search_files, name="search_files"),
 ]
 
 # Include the router-generated URLs

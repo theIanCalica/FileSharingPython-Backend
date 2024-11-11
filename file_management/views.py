@@ -24,6 +24,34 @@ from django.db.models import Count
 from django.db.models.functions import TruncMonth
 
 
+@api_view(["GET"])
+def search_files(request):
+    query = request.GET.get("q", "")  # Get the search query from the request
+
+    if query:
+        # Filter files by file_name
+        files = File.objects.filter(file_name__icontains=query)
+    else:
+        files = File.objects.none()  # Return no files if no query is provided
+
+    # Manually create a response structure without the extra 'model' and 'pk' fields
+    files_data = [
+        {
+            "id": file.id,
+            "file_name": file.file_name,
+            "file_url": file.file_url,
+            "public_id": file.public_id,
+            "upload_date": file.upload_date,
+            "file_type": file.file_type,
+            "file_size": file.file_size,
+        }
+        for file in files
+    ]
+
+    # Return the response with a status code of 200
+    return Response({"files": files_data}, status=200)
+
+
 # GET ALL FILES FOR ADMIN
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -125,7 +153,7 @@ def decrypt_file(request, pk):
         # Prepare the decrypted data for download
         response = FileResponse(io.BytesIO(decrypted_data), content_type=mime_type)
         response["Content-Disposition"] = (
-            f'attachment; filename="{file_instance.file_name}"'
+            f'attachment; filename="{file_instance.file_name + "." + file_instance.file_type}"'
         )
         print(file_instance.file_name)
         return response

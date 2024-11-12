@@ -23,6 +23,9 @@ from .models import *
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 
+# (10 MB)
+FILE_SIZE_LIMIT = 10 * 1024 * 1024  # 10 MB
+
 
 @api_view(["GET"])
 def search_files(request):
@@ -192,10 +195,19 @@ def file_upload_view(request):
 
     responses = []
     for file in files:
+        # Check file size
+        if file.size > FILE_SIZE_LIMIT:
+            return Response(
+                {
+                    "error": f"File '{file.name}' is too large. Maximum allowed size is 10 MB."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Read and encrypt file content
         file_data = file.read()
 
-        # Encrpyt the file
+        # Encrypt the file
         key, nonce, ciphertext, tag = encrypt_file(file_data)
         cloudinary_folder = f"user_{request.user.id}"
 
@@ -210,7 +222,7 @@ def file_upload_view(request):
             # Upload encrypted file to Cloudinary
             upload_result = cloudinary.uploader.upload(ciphertext, **upload_options)
             cloudinary_url = upload_result.get("secure_url")
-            public_id = upload_result.get("public_id")  # Get the public_id
+            public_id = upload_result.get("public_id")
 
             # Encode encryption components in Base64
             encoded_key = base64.b64encode(key).decode()
@@ -218,21 +230,18 @@ def file_upload_view(request):
             encoded_ciphertext = base64.b64encode(ciphertext).decode()
             encoded_tag = base64.b64encode(tag).decode()
 
-            # Get file size
-            file_size = file.size  # in bytes
-
             # Prepare data for serializer
             serializer_data = {
                 "file_name": original_filename,
                 "file_url": cloudinary_url,
-                "public_id": public_id,  # Include public_id in serializer data
+                "public_id": public_id,
                 "user": request.user.id,
                 "key": encoded_key,
                 "nonce": encoded_nonce,
                 "ciphertext": encoded_ciphertext,
                 "tag": encoded_tag,
                 "file_type": file_extension,
-                "file_size": file_size,
+                "file_size": file.size,
             }
 
             # Create serializer
@@ -326,11 +335,19 @@ def file_delete_view(request, pk):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def share_file(request):
-
     file_id = request.data.get("file_id")
     username = request.data.get("username")
     file = get_object_or_404(File, id=file_id, user=request.user)
-    shared_with = get_object_or_404(User, username=username)  # Change this line
+
+    # Check if the user with the given username exists
+    if not User.objects.filter(username=username).exists():
+        return Response(
+            {"error": "The specified user does not exist."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # If the user exists, retrieve the User object
+    shared_with = User.objects.get(username=username)
 
     shared_file, created = SharedFile.objects.get_or_create(
         file=file, shared_with=shared_with

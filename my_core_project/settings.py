@@ -109,11 +109,11 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
-DATABASES["default"] = dj_database_url.parse(
-    "postgresql://fireguard_user:iuFhSHjzYt2nJLeVYMJOEg0fzDwOSc1g@dpg-csmu6qdumphs73av1gvg-a.oregon-postgres.render.com/fireguard",
-    conn_max_age=600,
-    ssl_require=True,
-)
+# DATABASES["default"] = dj_database_url.parse(
+#     "postgresql://fireguard_user:iuFhSHjzYt2nJLeVYMJOEg0fzDwOSc1g@dpg-csmu6qdumphs73av1gvg-a.oregon-postgres.render.com/fireguard",
+#     conn_max_age=600,
+#     ssl_require=True,
+# )
 
 
 REST_FRAMEWORK = {

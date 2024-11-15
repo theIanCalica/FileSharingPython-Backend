@@ -385,6 +385,52 @@ def list_shared_files(request):
     return Response(shared_files_data, status=status.HTTP_200_OK)
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_files_shared_by_user(request):
+    shared_files = SharedFile.objects.filter(file__user=request.user)
+    shared_files_data = {}
+
+    for sf in shared_files:
+        file_id = sf.file.id
+        if file_id not in shared_files_data:
+            shared_files_data[file_id] = {
+                "id": file_id,
+                "file_name": sf.file.file_name,
+                "file_type": sf.file.file_type,
+                "shared_date": sf.shared_date,
+                "shared_with": [],
+            }
+        shared_files_data[file_id]["shared_with"].append(
+            {
+                "user_id": sf.shared_with.id,
+                "username": sf.shared_with.username,
+            }
+        )
+
+    return Response(list(shared_files_data.values()), status=status.HTTP_200_OK)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_shared_file(request, shared_file_id):
+    try:
+        shared_file = SharedFile.objects.get(id=shared_file_id)
+    except SharedFile.DoesNotExist:
+        return Response(
+            {
+                "error": "Shared file not found or you do not have permission to delete it."
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    shared_file.delete()
+    return Response(
+        {"message": "Shared file entry deleted successfully."},
+        status=status.HTTP_204_NO_CONTENT,
+    )
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_link_share(request):
@@ -428,14 +474,33 @@ def create_link_share(request):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
-def remove_shared_file(request, shared_file_id):
-    shared_file = get_object_or_404(
-        SharedFile, id=shared_file_id, shared_with=request.user
-    )
+def remove_shared_file(request, pk):
+    try:
+        # Retrieve the SharedFile object
+        shared_file = get_object_or_404(SharedFile, file_id=pk)
+        # Check if the authenticated user is the owner of the file
+        if shared_file.file.user != request.user:
+            return Response(
+                {"error": "You do not have permission to remove access to this file."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-    shared_file.delete()  # Remove the SharedFile entry to revoke access for this user
+        # Delete the SharedFile entry
+        shared_file.delete()
 
-    return Response(
-        {"message": "Access to the file has been removed successfully."},
-        status=status.HTTP_204_NO_CONTENT,
-    )
+        return Response(
+            {"message": "Access to the file has been removed successfully."},
+            status=status.HTTP_200_OK,
+        )
+    except AttributeError as e:
+        # Handle missing file or file.user attributes
+        return Response(
+            {"error": f"Attribute error: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    except Exception as e:
+        # General exception for any other unexpected errors
+        return Response(
+            {"error": f"Unexpected error: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

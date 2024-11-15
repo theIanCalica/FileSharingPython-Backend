@@ -32,6 +32,11 @@ urlpatterns = [
         "files/shared/", list_shared_files, name="list_shared_files"
     ),  # Read shared files
     path(
+        "files/shared-by-the-user/",
+        list_files_shared_by_user,
+        name="list_files_shared_by_user",
+    ),
+    path(
         "files/shared/delete/<int:pk>/", remove_shared_file, name="delete_shared_file"
     ),  # Delete share
     path(

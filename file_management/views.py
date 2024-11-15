@@ -339,6 +339,13 @@ def share_file(request):
     username = request.data.get("username")
     file = get_object_or_404(File, id=file_id, user=request.user)
 
+    # Check if the user is trying to share the file with themselves
+    if username == request.user.username:
+        return Response(
+            {"error": "You cannot share a file with yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     # Check if the user with the given username exists
     if not User.objects.filter(username=username).exists():
         return Response(
